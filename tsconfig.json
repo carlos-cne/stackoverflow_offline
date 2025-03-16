@@ -1,17 +1,15 @@
 {
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
+    "experimentalDecorators": true,
+    "esModuleInterop": true,
+    "jsx": "react-jsx",
     "strict": true,
+    "strictNullChecks": true,
+    "skipLibCheck": true,
     "paths": {
-      "@/*": [
-        "./*"
-      ]
+      "@/*": ["./*"]
     }
   },
-  "include": [
-    "**/*.ts",
-    "**/*.tsx",
-    ".expo/types/**/*.ts",
-    "expo-env.d.ts"
-  ]
+  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"]
 }

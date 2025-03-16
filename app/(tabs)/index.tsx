@@ -1,74 +1,100 @@
-import { Image, StyleSheet, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  RefreshControl,
+  FlatList,
+  TouchableOpacity,
+  ListRenderItemInfo,
+  Platform,
+} from "react-native";
+import { useRouter } from "expo-router";
+import { useMachine, useSelector } from "@xstate/react";
+import { syncMachine } from "../../machines/syncMachine";
+import QuestionCard from "../../components/QuestionCard";
+import Question from "@/model/Question";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+function QuestionsScreen() {
+  const router = useRouter();
+  const [state, send, actorRef] = useMachine(syncMachine);
+  const questions = useSelector(
+    actorRef,
+    (machine) => machine.context.questions
+  );
 
-export default function HomeScreen() {
+  const onRefresh = () => {
+    send({
+      type: "SYNC",
+    });
+  };
+
+  const renderItem = ({ item }: ListRenderItemInfo<Question>) => (
+    <QuestionCard
+      question={item}
+      onPress={() =>
+        router.push({
+          pathname: "/question/[id]",
+          params: { id: item.id },
+        })
+      }
+    />
+  );
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12'
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          Tap the Explore tab to learn more about what's included in this starter app.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          When you're ready, run{' '}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+    <SafeAreaView style={styles.container}>
+      {Platform.OS === "web" ? (
+        <TouchableOpacity onPress={onRefresh}>
+          <Text
+            style={{
+              color: "white",
+              fontSize: 24,
+            }}
+          >
+            Press here to update
+          </Text>
+        </TouchableOpacity>
+      ) : null}
+      <FlatList
+        data={questions}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id}
+        refreshControl={
+          <RefreshControl
+            refreshing={state.matches("syncing")}
+            onRefresh={onRefresh}
+            tintColor="#FF7B00"
+          />
+        }
+        ListEmptyComponent={
+          Platform.OS !== "web" ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>
+                Pull to refresh and load questions
+              </Text>
+            </View>
+          ) : null
+        }
+      />
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  container: {
+    flex: 1,
+    backgroundColor: "#121212",
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  emptyText: {
+    color: "#888",
+    fontSize: 16,
   },
 });
+
+export default QuestionsScreen;

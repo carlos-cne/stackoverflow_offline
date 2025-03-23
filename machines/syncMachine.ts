@@ -2,6 +2,7 @@ import { setup, assign, fromPromise, fromObservable } from "xstate";
 import { fetchQuestions } from "../services/stackExchange";
 import { database } from "@/database";
 import Question from "@/model/Question";
+import { Q } from "@nozbe/watermelondb";
 
 export const syncMachine = setup({
   actors: {
@@ -9,6 +10,7 @@ export const syncMachine = setup({
       async ({ input }: { input: { lastSyncDate: string | null } }) => {
         const questions = await fetchQuestions(input.lastSyncDate);
         const questionsCollection = database.get<Question>("questions");
+        console.log("questions", questions[0]);
         await database.write(async () => {
           const operations = questions.map((question: Question) =>
             questionsCollection.prepareCreate((q) => {
@@ -23,7 +25,10 @@ export const syncMachine = setup({
       }
     ),
     subscribeToDBChanges: fromObservable(() =>
-      database.get<Question>("questions").query().observe()
+      database
+        .get<Question>("questions")
+        .query(Q.sortBy("last_activity_date_at", Q.desc))
+        .observe()
     ),
   },
   types: {
@@ -44,9 +49,11 @@ export const syncMachine = setup({
   invoke: {
     src: "subscribeToDBChanges",
     onSnapshot: {
-      actions: assign(({ event }) => ({
-        questions: event.snapshot.context,
-      })),
+      actions: [
+        assign(({ event }) => ({
+          questions: event.snapshot.context,
+        })),
+      ],
     },
   },
   on: {
